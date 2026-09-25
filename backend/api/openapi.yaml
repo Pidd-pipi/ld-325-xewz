@@ -21,3 +21,41 @@ paths:
     post: {summary: 创建价格预警}
   /api/v1/budgets:
     post: {summary: 保存装修预算}
+  /api/v1/purchase-order:
+    get:
+      summary: 获取当前用户采购单，返回锁价、当前价、差额和动态可采购状态
+      responses: {'200': {description: 成功}}
+  /api/v1/purchase-order/offers:
+    post:
+      summary: 将有效商家报价加入采购单；同一报价重复加入时累加数量并保留首次锁价
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [offer_id, quantity]
+              properties:
+                offer_id: {type: integer, minimum: 1}
+                quantity: {type: integer, minimum: 1}
+      responses:
+        '200': {description: 成功}
+        '400': {description: 报价停售/缺货、供应商资质未通过或数量低于起订量}
+  /api/v1/purchase-order/items/{id}/quantity:
+    patch:
+      summary: 调整采购单条目数量；不可采购条目的数量调整会被拒绝
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              properties:
+                quantity: {type: integer, minimum: 1}
+      responses: {'200': {description: 成功}, '400': {description: 条目不可采购或数量低于起订量}}

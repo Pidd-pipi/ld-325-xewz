@@ -42,6 +42,7 @@ docker compose down
 - **价格趋势**：读取报价历史，展示 30/90 天或 1 年区间的最高、最低和平均价；前端以 ECharts 绘制 30 天图表。
 - **价格预警**：按目标价和降幅百分比创建订阅，演示环境使用 `demo-user` 身份写入站内预警记录。
 - **供应商管理**：供应商资质和审核状态可查询；管理员审核、供应商库存状态更新接口已保留。
+- **锁价采购单**：只允许选择资质已通过、仍有货且达到起订量的商家报价；首次加入即锁定单价，重复加入累加数量，并持续展示锁价、当前价与差额。库存停售或资质被驳回后，条目保留但自动标记为不可采购并暂停数量调整。
 - **装修预算**：按客厅、厨房、卫生间和面积基于市场均价试算，结果可保存，前端提供导出入口。
 
 ## 本地开发（备选）
@@ -104,6 +105,9 @@ npm run dev -- -p 18625
 | GET/POST | `/api/v1/favorites` | 收藏列表 / 添加收藏 |
 | POST | `/api/v1/alerts` | 创建价格预警 |
 | POST | `/api/v1/budgets` | 保存预算试算 |
+| GET | `/api/v1/purchase-order` | 查看采购单及锁价、当前价、差额、可采购状态 |
+| POST | `/api/v1/purchase-order/offers` | 将合格商家报价加入采购单；同报价重复加入累加数量且保留首次锁价 |
+| PATCH | `/api/v1/purchase-order/items/:id/quantity` | 调整可采购条目的数量 |
 | GET | `/api/v1/suppliers` | 查询供应商 |
 | PATCH | `/api/v1/admin/suppliers/:id/status` | 审核供应商（admin 角色） |
 | PATCH | `/api/v1/supplier/offers/:id/status` | 更新报价库存状态（supplier/admin 角色） |
