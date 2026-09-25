@@ -14,5 +14,9 @@ type BusinessError struct {
 	Err     error
 }
 
+func NewBusinessError(code int, message string, cause error) *BusinessError {
+	return &BusinessError{Code: code, Message: message, Err: cause}
+}
+
 func (e *BusinessError) Error() string { return e.Message }
 func (e *BusinessError) Unwrap() error { return e.Err }

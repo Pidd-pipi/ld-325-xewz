@@ -5,6 +5,7 @@ import "gorm.io/gorm"
 type Offer struct {
 	gorm.Model
 	ProductID    uint
+	Product      Product
 	SupplierID   uint
 	Supplier     Supplier
 	UnitPrice    float64

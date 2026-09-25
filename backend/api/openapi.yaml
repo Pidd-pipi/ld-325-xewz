@@ -5,19 +5,97 @@ info:
 paths:
   /healthz:
     get:
-      responses: {'200': {description: 服务健康}}
+      summary: 服务健康检查
+      responses:
+        '200':
+          description: 服务健康
   /api/v1/products:
     get:
       summary: 搜索、分类和排序建材
-      responses: {'200': {description: 成功}}
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: category, in: query, schema: { type: string } }
+        - { name: sort, in: query, schema: { type: string, enum: [price, sales, rating] } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: page_size, in: query, schema: { type: integer, default: 12 } }
+      responses:
+        '200': { description: 成功 }
+  /api/v1/products/{id}:
+    get:
+      summary: 建材详情及报价
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: 成功 }
   /api/v1/products/compare:
     post:
       summary: 批量比较建材
-      responses: {'200': {description: 成功}}
+      responses:
+        '200': { description: 成功 }
+  /api/v1/products/{id}/offers:
+    get:
+      summary: 查询某建材的商家报价
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: 成功 }
+  /api/v1/products/{id}/trend:
+    get:
+      summary: 查询价格趋势
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: range, in: query, schema: { type: string, enum: [30d, 90d, 1y] } }
+      responses:
+        '200': { description: 成功 }
+  /api/v1/purchase-order:
+    get:
+      summary: 获取当前用户采购单，含锁价、当前价与差额
+      responses:
+        '200': { description: 成功 }
+  /api/v1/purchase-order/items:
+    post:
+      summary: 选择商家报价加入采购单；同一报价累加数量且不覆盖首次锁价
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [offer_id, quantity]
+              properties:
+                offer_id: { type: integer, minimum: 1 }
+                quantity: { type: integer, minimum: 1, description: 必须达到报价起订量 }
+      responses:
+        '200': { description: 成功 }
+        '404': { description: 报价不存在 }
+        '422': { description: 资质未通过、无货/停售或数量低于起订量 }
+  /api/v1/purchase-order/items/{id}:
+    patch:
+      summary: 调整采购数量；条目不可采购时拒绝调整但保留锁价和数量
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              properties:
+                quantity: { type: integer, minimum: 1 }
+      responses:
+        '200': { description: 成功 }
+        '422': { description: 条目不可采购或数量低于起订量 }
   /api/v1/favorites:
-    get: {summary: 获取收藏}
-    post: {summary: 添加收藏}
+    get: { summary: 获取收藏 }
+    post: { summary: 添加收藏 }
   /api/v1/alerts:
-    post: {summary: 创建价格预警}
+    post: { summary: 创建价格预警 }
   /api/v1/budgets:
-    post: {summary: 保存装修预算}
+    post: { summary: 保存装修预算 }
+  /api/v1/suppliers:
+    get: { summary: 查询供应商 }
+  /api/v1/admin/suppliers/{id}/status:
+    patch: { summary: 管理员审核供应商资质 }
+  /api/v1/supplier/offers/{id}/status:
+    patch: { summary: 供应商或管理员更新库存状态 }

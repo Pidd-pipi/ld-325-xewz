@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { BellRing, CheckCircle2, Download, Info } from 'lucide-react';
+import { Ban, BellRing, CheckCircle2, Info, Lock, ShoppingCart } from 'lucide-react';
 
-import type { Product, Trend } from '@/lib/types';
+import type { Offer, Product, Trend } from '@/lib/types';
 import { money } from '@/lib/utils';
+import { offerPurchasable, offerStockLabel, supplierStatusLabel } from '@/lib/purchase';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { PriceTrend } from './PriceTrend';
 
 type TrendRange = '30d' | '90d' | '1y';
@@ -16,6 +18,8 @@ interface InsightPanelProps {
   range: TrendRange;
   onRange: (range: TrendRange) => void;
   onAlert: (id: number, target: number) => Promise<void>;
+  onAddOffer: (offer: Offer, quantity: number) => Promise<void>;
+  addingOfferId: number | null;
 }
 
 const rangeOptions: Array<{ value: TrendRange; label: string }> = [
@@ -24,8 +28,9 @@ const rangeOptions: Array<{ value: TrendRange; label: string }> = [
   { value: '1y', label: '1 年' },
 ];
 
-export function InsightPanel({ product, trend, range, onRange, onAlert }: InsightPanelProps) {
+export function InsightPanel({ product, trend, range, onRange, onAlert, onAddOffer, addingOfferId }: InsightPanelProps) {
   const [alerted, setAlerted] = useState(false);
+  const [quantities, setQuantities] = useState<Record<number, string>>({});
   if (!product) {
     return <section className="insights"><p className="eyebrow">PRICE PULSE</p><h2>选择一款材料，查看它的价格脉搏。</h2><p>趋势、供应商、最低价和预警都将在这里展开。</p></section>;
   }
@@ -61,10 +66,45 @@ export function InsightPanel({ product, trend, range, onRange, onAlert }: Insigh
         </dl>
       </div>
       <div className="offer-table">
-        <div className="offer-title"><b>商家报价</b><span><Info size={14} /> 当前最低价已标注</span></div>
-        {offers.map((offer) => <div className={offer.UnitPrice === low ? 'offer lowest' : 'offer'} key={offer.ID}><b>{offer.Supplier.Name}</b><span>{offer.DeliveryDays} 天交货 · 起订 {offer.MOQ} {product.Unit}</span><span>{offer.StockStatus === 'in_stock' ? '有货' : '库存紧张'}</span><strong>{money(offer.UnitPrice)}</strong></div>)}
+        <div className="offer-title"><b>商家报价</b><span><Info size={14} /> 仅资质通过、有货且达到起订量可锁价采购</span></div>
+        <div className="offer-row offer-head"><span>供应商</span><span>资质 / 库存</span><span>交付与起订</span><span>单价</span><span>加入采购单</span></div>
+        {offers.map((offer) => {
+          const purchasable = offerPurchasable(offer);
+          const quantity = Number(quantities[offer.ID] ?? offer.MOQ);
+          const quantityValid = Number.isInteger(quantity) && quantity >= offer.MOQ;
+          return (
+            <div className={offer.UnitPrice === low ? 'offer-row lowest' : 'offer-row'} key={offer.ID}>
+              <b>{offer.Supplier.Name}</b>
+              <span className="offer-conditions">
+                <Badge tone={offer.Supplier.Status === 'approved' ? 'good' : 'alert'}>{supplierStatusLabel(offer.Supplier.Status)}</Badge>
+                <Badge tone={offer.StockStatus === 'in_stock' ? 'good' : 'alert'}>{offerStockLabel(offer.StockStatus)}</Badge>
+              </span>
+              <span>{offer.DeliveryDays} 天交货 · 起订 {offer.MOQ} {product.Unit}<br /><small>{offer.Freight}</small></span>
+              <strong>{money(offer.UnitPrice)}<small> / {product.Unit}</small></strong>
+              <span className="offer-add">
+                <label>
+                  数量
+                  <input
+                    aria-label={`${offer.Supplier.Name} 采购数量`}
+                    type="number" min={offer.MOQ} step="1"
+                    value={quantities[offer.ID] ?? String(offer.MOQ)}
+                    disabled={!purchasable || addingOfferId === offer.ID}
+                    onChange={(event) => setQuantities((current) => ({ ...current, [offer.ID]: event.target.value }))}
+                  />
+                </label>
+                <Button
+                  disabled={!purchasable || !quantityValid || addingOfferId === offer.ID}
+                  onClick={() => onAddOffer(offer, quantity)}
+                >
+                  {purchasable ? <ShoppingCart size={14} /> : <Ban size={14} />}
+                  {purchasable ? '锁价加入' : '不可采购'}
+                </Button>
+              </span>
+            </div>
+          );
+        })}
       </div>
-      <button className="export"><Download size={15} />导出该材料报价单</button>
+      <button className="export"><Lock size={15} /> 第一次加入时锁定单价；再次加入同一报价只累加数量</button>
     </section>
   );
 }

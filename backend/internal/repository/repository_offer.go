@@ -1,18 +1,35 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
+
 	"github.com/blueship581/cybuildprice/backend/internal/model"
 	"gorm.io/gorm"
 )
 
 type OfferRepository interface {
+	GetWithDetails(uint) (model.Offer, error)
 	ListByProduct(uint) ([]model.Offer, error)
 	UpdateStatus(uint, string) (model.Offer, error)
 }
+
 type offerRepository struct{ db *gorm.DB }
 
 func NewOfferRepository(db *gorm.DB) OfferRepository { return &offerRepository{db} }
+
+func (r *offerRepository) GetWithDetails(id uint) (model.Offer, error) {
+	var data model.Offer
+	err := r.db.Preload("Supplier").Preload("Product").First(&data, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return data, fmt.Errorf("get offer %d: %w", id, gorm.ErrRecordNotFound)
+	}
+	if err != nil {
+		return data, fmt.Errorf("get offer: %w", err)
+	}
+	return data, nil
+}
+
 func (r *offerRepository) ListByProduct(id uint) ([]model.Offer, error) {
 	var data []model.Offer
 	if err := r.db.Preload("Supplier").Where("product_id = ?", id).Order("unit_price ASC").Find(&data).Error; err != nil {
@@ -20,6 +37,7 @@ func (r *offerRepository) ListByProduct(id uint) ([]model.Offer, error) {
 	}
 	return data, nil
 }
+
 func (r *offerRepository) UpdateStatus(id uint, status string) (model.Offer, error) {
 	var item model.Offer
 	if err := r.db.First(&item, id).Error; err != nil {

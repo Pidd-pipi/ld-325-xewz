@@ -1,2 +1,5 @@
 -- GORM AutoMigrate creates the initial schema at startup. This file documents the managed migration boundary.
--- Tables: categories, products, suppliers, offers, price_histories, favorites, price_alerts, budgets.
+-- Tables: categories, products, suppliers, offers, price_histories, favorites, price_alerts, budgets,
+-- purchase_orders, purchase_order_items.
+-- purchase_order_items has a unique (purchase_order_id, offer_id) index so a repeated quote accumulates
+-- quantity while preserving the first locked_unit_price.
